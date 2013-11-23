@@ -21,7 +21,7 @@ for line in sys.stdin.readlines():
 EOF`"|
 xargs -L1 -n2 sh -c 'dd if='$1' skip=$0 count=$1 iflag=count_bytes,skip_bytes of=./wallet_$0.dat'
 
-[[ ! -x `which db_verify` ]] && echo "db_verify not found; verificaiton skipped; install db-util package" && exit 0
+[[ ! -x `which db_verify` ]] && echo "db_verify not found; verification skipped; install db-util package" && exit 0
 
 for f in *dat ; do
     db_verify -q $f
