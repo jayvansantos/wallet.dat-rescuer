@@ -1,0 +1,29 @@
+#!/bin/bash
+USAGE="bitcoin-qt wallet.dat retrieval tool\n
+usage: $0 block_device\uncompressed_disk_image [wallet_filesize_limit]\n
+origin: https://github.com/fiocfun/wallet.dat-rescuer\n
+gratitude are appreciated at 1Kkq47DFikMAUcEnZcjH9y5V53cqyTzqt9"
+
+MAXSIZE=${2:-10485760} #default 10M
+[[ -z $1 ]] && echo -e $USAGE && exit 1
+[[ ! -r $1 ]] && echo "can't read $1" && exit 1
+MAGIC='(?<=\x00\x00\x00\x00.\x00\x00\x00\x00\x00\x00\x00\x62\x31\x05\x00.{16})..'
+cat $1 | grep -Uboa -P $MAGIC |
+python -c "`cat <<EOF
+import sys
+for line in sys.stdin.readlines():
+    [so,ss]=line.split(':')
+    offset=int(so)-32
+    [lb,ub]=map(ord,ss[:-1])
+    size=(ub*256+lb+1)*4096
+    if (size<$MAXSIZE):
+       print offset,size
+EOF`"|
+xargs -L1 -n2 sh -c 'dd if='$1' skip=$0 count=$1 iflag=count_bytes,skip_bytes of=./wallet_$0.dat'
+
+[[ ! -x `which db_verify` ]] && echo "db_verify not found; verificaiton skipped; install db-util package" && exit 0
+
+for f in *dat ; do
+    db_verify -q $f
+    [[ 0 -ne $? ]] && mv $f "$f.broken"
+done
